@@ -63,13 +63,21 @@ async function run() {
           priceQuery.price = { $lte: maxPrice };
         }
 
-        // sorting:
-        const sortOrder = req.query?.sortOrder;
+        // Sorting by price
+        const sortOrderPrice = req.query?.sortOrderPrice;
         let sortQuery = {};
-        if (sortOrder === "low-to-high") {
-          sortQuery = { price: 1 }; // Ascending order
-        } else if (sortOrder === "high-to-low") {
-          sortQuery = { price: -1 }; // Descending order
+        if (sortOrderPrice === "low-to-high") {
+          sortQuery.price = 1;
+        } else if (sortOrderPrice === "high-to-low") {
+          sortQuery.price = -1;
+        }
+
+        // Sorting by date
+        const sortOrderDate = req.query?.sortOrderDate;
+        if (sortOrderDate === "newest-first") {
+          sortQuery.created_at = -1;
+        } else if (sortOrderDate === "oldest-first") {
+          sortQuery.created_at = 1;
         }
 
         let products = [];
