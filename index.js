@@ -39,22 +39,65 @@ async function run() {
       try {
         const perPageView = Number(req.query?.perPageView);
         const currentPage = Number(req.query?.currentPage) - 1;
+
         const search = req.query?.search?.trim();
         const searchQuery = search
           ? { name: { $regex: search, $options: "i" } }
           : {};
 
         const brand = req?.query?.brand;
-        const category = req?.query?.category;
-
         const brandQuery = brand ? { brand } : {};
-        const categoryQuery = category ? { category } : {};
-        // const priceRange = req?.query?.category ? { category} : {};
 
-        const products = await productsCollection
-          .find({ ...searchQuery, ...brandQuery, ...categoryQuery })
+        const category = req?.query?.category;
+        const categoryQuery = category ? { category } : {};
+
+        // price query:
+        const minPrice = Number(req?.query?.minPrice);
+        const maxPrice = Number(req?.query?.maxPrice);
+        const priceQuery = {};
+        if (minPrice && maxPrice) {
+          priceQuery.price = { $gte: minPrice, $lte: maxPrice };
+        } else if (minPrice && !maxPrice) {
+          priceQuery.price = { $gte: minPrice };
+        } else if (maxPrice && !minPrice) {
+          priceQuery.price = { $lte: maxPrice };
+        }
+
+        // sorting:
+        const sortOrder = req.query?.sortOrder;
+        let sortQuery = {};
+        if (sortOrder === "low-to-high") {
+          sortQuery = { price: 1 }; // Ascending order
+        } else if (sortOrder === "high-to-low") {
+          sortQuery = { price: -1 }; // Descending order
+        }
+
+        let products = [];
+        if (
+          brandQuery.brand ||
+          categoryQuery.category ||
+          minPrice ||
+          maxPrice
+        ) {
+          products = await productsCollection
+            .find({
+              ...searchQuery,
+              ...brandQuery,
+              ...categoryQuery,
+              ...priceQuery,
+            })
+            .sort(sortQuery)
+            .toArray();
+          return res.send(products);
+        }
+
+        products = await productsCollection
+          .find({
+            ...searchQuery,
+          })
           .skip(currentPage * perPageView)
           .limit(perPageView)
+          .sort(sortQuery)
           .toArray();
         res.send(products);
       } catch (error) {
@@ -88,7 +131,6 @@ async function run() {
         }
       }
       return res.send(categories);
-
     });
 
     //get a single product by id:
