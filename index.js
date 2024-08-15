@@ -40,9 +40,19 @@ async function run() {
         const perPageView = Number(req.query?.perPageView);
         const currentPage = Number(req.query?.currentPage) - 1;
         const search = req.query?.search?.trim();
-        const query = search ? { name: { $regex: search, $options: "i" } } : {};
+        const searchQuery = search
+          ? { name: { $regex: search, $options: "i" } }
+          : {};
+
+        const brand = req?.query?.brand;
+        const category = req?.query?.category;
+
+        const brandQuery = brand ? { brand } : {};
+        const categoryQuery = category ? { category } : {};
+        // const priceRange = req?.query?.category ? { category} : {};
+
         const products = await productsCollection
-          .find(query)
+          .find({ ...searchQuery, ...brandQuery, ...categoryQuery })
           .skip(currentPage * perPageView)
           .limit(perPageView)
           .toArray();
@@ -50,6 +60,35 @@ async function run() {
       } catch (error) {
         res.send({ message: error });
       }
+    });
+
+    // get all brands:
+    app.get("/product-brand-names", async (req, res) => {
+      const options = { projection: { _id: 0, brand: 1 } };
+      const names = await productsCollection.find({}, options).toArray();
+      let brands = [];
+
+      for (let name of names) {
+        if (!brands.includes(name.brand)) {
+          brands.push(name.brand);
+        }
+      }
+      return res.send(brands);
+    });
+
+    // get all categories:
+    app.get("/product-category-names", async (req, res) => {
+      const options = { projection: { _id: 0, category: 1 } };
+      const names = await productsCollection.find({}, options).toArray();
+      let categories = [];
+
+      for (let name of names) {
+        if (!categories.includes(name.category)) {
+          categories.push(name.category);
+        }
+      }
+      return res.send(categories);
+
     });
 
     //get a single product by id:
