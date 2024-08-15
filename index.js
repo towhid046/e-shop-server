@@ -31,8 +31,17 @@ async function run() {
   try {
     // get all products:
     app.get("/products", async (req, res) => {
-      const products = await productsCollection.find().toArray();
-      res.send(products);
+      try {
+        const search = req.query?.search?.trim();
+        const query = search ? { name: { $regex: search, $options: "i" } } : {};
+        const products = await productsCollection
+          .find(query)
+          .limit(2)
+          .toArray();
+        res.send(products);
+      } catch (error) {
+        res.send({ message: error });
+      }
     });
 
     //get a single product by id:
@@ -56,5 +65,5 @@ async function run() {
 run().catch(console.dir);
 
 app.listen(port, () => {
-  console.log(`E-medicine server is running on port: ${port}`);
+  console.log(`E-shop server is running on port: ${port}`);
 });
