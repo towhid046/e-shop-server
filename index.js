@@ -29,14 +29,22 @@ app.get("/", (req, res) => {
 async function run() {
   const productsCollection = client.db("eShopDB").collection("products");
   try {
+    // get estimated document count:
+    app.get("/products-count", async (req, res) => {
+      const productCount = await productsCollection.estimatedDocumentCount();
+      res.send({ productCount });
+    });
     // get all products:
     app.get("/products", async (req, res) => {
       try {
+        const perPageView = Number(req.query?.perPageView);
+        const currentPage = Number(req.query?.currentPage) - 1;
         const search = req.query?.search?.trim();
         const query = search ? { name: { $regex: search, $options: "i" } } : {};
         const products = await productsCollection
           .find(query)
-          .limit(2)
+          .skip(currentPage * perPageView)
+          .limit(perPageView)
           .toArray();
         res.send(products);
       } catch (error) {
