@@ -31,8 +31,12 @@ async function run() {
   try {
     // get estimated document count:
     app.get("/products-count", async (req, res) => {
-      const productCount = await productsCollection.estimatedDocumentCount();
-      res.send({ productCount });
+      try {
+        const productCount = await productsCollection.estimatedDocumentCount();
+        res.send({ productCount });
+      } catch (error) {
+        res.send({ error });
+      }
     });
     // get all products:
     app.get("/products", async (req, res) => {
@@ -109,48 +113,74 @@ async function run() {
           .toArray();
         res.send(products);
       } catch (error) {
-        res.send({ message: error });
+        res.send({ error });
       }
     });
 
     // get all brands:
     app.get("/product-brand-names", async (req, res) => {
-      const options = { projection: { _id: 0, brand: 1 } };
-      const names = await productsCollection.find({}, options).toArray();
-      let brands = [];
+      try {
+        const options = { projection: { _id: 0, brand: 1 } };
+        const names = await productsCollection.find({}, options).toArray();
+        let brands = [];
 
-      for (let name of names) {
-        if (!brands.includes(name.brand)) {
-          brands.push(name.brand);
+        for (let name of names) {
+          if (!brands.includes(name.brand)) {
+            brands.push(name.brand);
+          }
         }
+        return res.send(brands);
+      } catch (error) {
+        res.send({ error });
       }
-      return res.send(brands);
     });
 
     // get all categories:
     app.get("/product-category-names", async (req, res) => {
-      const options = { projection: { _id: 0, category: 1 } };
-      const names = await productsCollection.find({}, options).toArray();
-      let categories = [];
+      try {
+        const options = { projection: { _id: 0, category: 1 } };
+        const names = await productsCollection.find({}, options).toArray();
+        let categories = [];
 
-      for (let name of names) {
-        if (!categories.includes(name.category)) {
-          categories.push(name.category);
+        for (let name of names) {
+          if (!categories.includes(name.category)) {
+            categories.push(name.category);
+          }
         }
+        return res.send(categories);
+      } catch (error) {
+        res.send({ error });
       }
-      return res.send(categories);
     });
 
     //get a single product by id:
     app.get("/products/:id", async (req, res) => {
-      const id = req.params.id;
-      if (!id) {
-        return req.send({ message: "Id is required" });
+      try {
+        const id = req.params.id;
+        if (!id) {
+          return req.send({ message: "Id is required" });
+        }
+        const product = await productsCollection.findOne({
+          _id: new ObjectId(id),
+        });
+        res.send(product);
+      } catch (error) {
+        res.send({ error });
       }
-      const product = await productsCollection.findOne({
-        _id: new ObjectId(id),
-      });
-      res.send(product);
+    });
+
+    // get cart products:
+    app.post("/cart-items", async (req, res) => {
+      try {
+        const productIds = req.body;
+        const objectIds = productIds?.map((id) => new ObjectId(id));
+        const query = { _id: { $in: objectIds } };
+        const products = await productsCollection.find(query).toArray();
+        res.send(products);
+      } catch (error) {
+        console.error(error);
+        res.status(500).send("An error occurred while fetching cart items");
+      }
     });
 
     console.log(
